@@ -43,4 +43,4 @@ Other keypress -> do nothing.
 
 ##  Solution
 
-Create initialization data dependency by running `seq` on subsequent IO.
+Create initialization data dependency on config for subsequent IO actions.
