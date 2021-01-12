@@ -8,10 +8,13 @@ We have a program which should read a large configuration file upon startup, and
 main :: IO ()
 main = do
     config <- getLargeConfig
-    startServer $! config [routeHandler]
+    startServer config [routeHandler]
     
-startServer :: Config -> [Routes] -> IO ()
-startServer config rs = do
+-- | Server with a single route
+startServer :: Config -> (Text -> Config -> Text) -> IO ()
+startServer config rs = forever $ do
+    r <- getReq
+    routeHandler r config
     
 data Config =
     { networkUri :: Text
@@ -19,15 +22,14 @@ data Config =
     , b :: ...
     , c :: ...
     , d :: ...
+    , ...
     }
     
-routeHandler :: Text -> Config -> Text
-routeHandler req Config{..} = return networkUri
+routeHandler :: Text -> Config -> IO Response
+routeHandler req Config{..} = sendResponse networkUri
 ```
 
 This is because only when the route gets triggered, the data dependency on `Config{..}` forces evaluation of `config` and in turn the `getLargeConfig` action.
-
-We will reproduce this & provide a solution
 
 ## Reproduce problem
 
@@ -37,10 +39,16 @@ Create a large file, for which IO is expensive:
 make test
 ```
 
-Whenever there is keypress `'r'`, read the entire file.
+Whenever there is input `"READ"`, read the entire file.
 
-Other keypress -> do nothing.
+Other string, invalid
 
 ##  Solution
 
 Create initialization data dependency on config for subsequent IO actions.
+
+## Observation
+
+For `problem.hs`, lazy IO results in the READ op not being executed until we type "READ".
+
+For the solutions, after waiting a while, we will get READ op response instantly.
